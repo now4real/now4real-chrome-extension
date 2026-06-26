@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Now4real Everywhere</title>
+    <link rel="stylesheet" href="settings.css">
+  </head>
+  <body class="popup-shell">
+    <main class="panel">
+      <header class="header">
+        <img class="brand-icon" src="../icons/icon48.png" alt="" width="48" height="48">
+        <div class="header-copy">
+          <h1>Now4real</h1>
+          <p id="widgetStateText">Widget active on all sites.</p>
+        </div>
+        <label class="switch header-switch" aria-label="Enable Now4real">
+          <input id="now4realEnabled" type="checkbox">
+          <span></span>
+        </label>
+      </header>
+
+      <section class="setting-group" aria-labelledby="position-title">
+        <h2 id="position-title">Widget position</h2>
+        <div class="segmented-control">
+          <label>
+            <input type="radio" name="widgetPosition" value="left">
+            <span>Left</span>
+          </label>
+          <label>
+            <input type="radio" name="widgetPosition" value="right">
+            <span>Right</span>
+          </label>
+        </div>
+      </section>
+
+      <section class="setting-group demo-row">
+        <div>
+          <h2>Demo mode</h2>
+          <p>Starts the widget in a shared sandbox with other test users, so you can try Now4real features without using the live site context.</p>
+        </div>
+        <label class="switch" aria-label="Enable demo mode">
+          <input id="demoMode" type="checkbox">
+          <span></span>
+        </label>
+      </section>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </main>
+    <script src="settings.js"></script>
+  </body>
+</html>
