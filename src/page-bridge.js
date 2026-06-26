@@ -1,6 +1,7 @@
 (() => {
   const CDN_SCRIPT_ID = 'now4real-cdn-script';
   const SETTINGS_EVENT = 'now4real-extension-settings';
+  const LOAD_STATUS_EVENT = 'now4real-extension-load-status';
   const NOW4REAL_SCRIPT_URL = 'https://cdn.staging.now4real.com/now4real.js';
 
   let loadRequested = false;
@@ -27,8 +28,32 @@
     window.now4real.config = buildConfig(settings);
   }
 
+  function hasNow4realScript() {
+    return Array.from(document.querySelectorAll('script[src]')).some((script) => (
+      script.src === NOW4REAL_SCRIPT_URL || script.getAttribute('src') === NOW4REAL_SCRIPT_URL
+    ));
+  }
+
+  function createTrustedScriptUrl(url) {
+    if (!window.trustedTypes) {
+      return url;
+    }
+
+    const policy = window.trustedTypes.createPolicy('now4real-extension', {
+      createScriptURL: (scriptUrl) => scriptUrl
+    });
+
+    return policy.createScriptURL(url);
+  }
+
+  function dispatchLoadStatus(status) {
+    window.dispatchEvent(new CustomEvent(LOAD_STATUS_EVENT, {
+      detail: { status }
+    }));
+  }
+
   function loadNow4real() {
-    if (loadRequested || document.getElementById(CDN_SCRIPT_ID)) {
+    if (loadRequested || document.getElementById(CDN_SCRIPT_ID) || hasNow4realScript()) {
       return;
     }
 
@@ -37,7 +62,25 @@
     script.id = CDN_SCRIPT_ID;
     script.type = 'text/javascript';
     script.async = true;
-    script.src = NOW4REAL_SCRIPT_URL;
+
+    try {
+      script.src = createTrustedScriptUrl(NOW4REAL_SCRIPT_URL);
+    } catch (error) {
+      loadRequested = false;
+      dispatchLoadStatus('blocked');
+      console.warn('Now4real script injection was blocked by the page Trusted Types policy.', error);
+      return;
+    }
+
+    script.addEventListener('load', () => {
+      dispatchLoadStatus('loaded');
+    }, { once: true });
+
+    script.addEventListener('error', () => {
+      loadRequested = false;
+      dispatchLoadStatus('blocked');
+    }, { once: true });
+
     (document.head || document.documentElement).appendChild(script);
   }
 

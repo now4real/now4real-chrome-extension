@@ -106,6 +106,16 @@ code {
   border-bottom: 1px solid var(--line);
 }
 
+.load-warning {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border: 1px solid #f0c6c6;
+  border-radius: 8px;
+  color: #8f1f1f;
+  background: #fff1f1;
+  font-weight: 700;
+}
+
 .segmented-control {
   display: grid;
   grid-template-columns: 1fr 1fr;

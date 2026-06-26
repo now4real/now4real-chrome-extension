@@ -8,7 +8,12 @@ const now4realEnabledInput = document.querySelector('#now4realEnabled');
 const widgetStateText = document.querySelector('#widgetStateText');
 const positionInputs = document.querySelectorAll('input[name="widgetPosition"]');
 const demoModeInput = document.querySelector('#demoMode');
+const loadWarningEl = document.querySelector('#loadWarning');
 const statusEl = document.querySelector('#status');
+
+const LOAD_WARNING_MESSAGE = 'Now4real could not load on this site because the site blocks third-party scripts.';
+
+let currentHost = '';
 
 function normalizeSettings(settings) {
   return {
@@ -41,6 +46,38 @@ function render(settings) {
   demoModeInput.checked = normalizedSettings.demoMode;
 }
 
+function normalizeHost(host) {
+  return String(host || '').toLowerCase().replace(/^www\./, '');
+}
+
+function getHostFromUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
+      return '';
+    }
+
+    return normalizeHost(parsedUrl.hostname);
+  } catch (error) {
+    return '';
+  }
+}
+
+function getLoadStatusKey() {
+  return `now4realLoadStatus:${currentHost}`;
+}
+
+async function renderLoadWarning() {
+  if (!loadWarningEl || !currentHost) {
+    return;
+  }
+
+  const status = await chrome.storage.local.get(getLoadStatusKey());
+  const loadStatus = status[getLoadStatusKey()];
+  loadWarningEl.hidden = !(loadStatus && loadStatus.status === 'blocked');
+  loadWarningEl.textContent = LOAD_WARNING_MESSAGE;
+}
+
 async function saveSettings() {
   const checkedPosition = document.querySelector('input[name="widgetPosition"]:checked');
   const settings = normalizeSettings({
@@ -69,8 +106,12 @@ async function refreshCurrentTab() {
 }
 
 async function init() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  currentHost = tab && tab.url ? getHostFromUrl(tab.url) : '';
+
   const settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
   render(settings);
+  await renderLoadWarning();
 
   now4realEnabledInput.addEventListener('change', saveSettings);
   positionInputs.forEach((input) => {

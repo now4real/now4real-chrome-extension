@@ -6,6 +6,8 @@ const DEFAULT_SETTINGS = {
 
 const BRIDGE_SCRIPT_ID = 'now4real-extension-page-bridge';
 const SETTINGS_EVENT = 'now4real-extension-settings';
+const LOAD_STATUS_EVENT = 'now4real-extension-load-status';
+const LOAD_WARNING_MESSAGE = 'Now4real could not load on this site because the site blocks third-party scripts.';
 
 function normalizeSettings(settings) {
   return {
@@ -19,6 +21,31 @@ function dispatchSettings(settings) {
   window.dispatchEvent(new CustomEvent(SETTINGS_EVENT, {
     detail: normalizeSettings(settings)
   }));
+}
+
+function normalizeHost(host) {
+  return String(host || '').toLowerCase().replace(/^www\./, '');
+}
+
+function getLoadStatusKey() {
+  return `now4realLoadStatus:${normalizeHost(window.location.hostname)}`;
+}
+
+async function handleLoadStatus(status) {
+  if (status === 'blocked') {
+    await chrome.storage.local.set({
+      [getLoadStatusKey()]: {
+        status: 'blocked',
+        message: LOAD_WARNING_MESSAGE,
+        updatedAt: Date.now()
+      }
+    });
+    return;
+  }
+
+  if (status === 'loaded') {
+    await chrome.storage.local.remove(getLoadStatusKey());
+  }
 }
 
 function injectBridge() {
@@ -54,5 +81,9 @@ async function init() {
   await injectBridge();
   dispatchSettings(settings);
 }
+
+window.addEventListener(LOAD_STATUS_EVENT, (event) => {
+  handleLoadStatus(event.detail && event.detail.status);
+});
 
 init();
