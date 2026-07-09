@@ -4,6 +4,7 @@
   "private": true,
   "description": "Chrome extension MV3 that injects the Now4real widget on visited pages.",
   "scripts": {
+    "generate:icons": "sh scripts/generate-icons.sh",
     "validate": "node scripts/validate.js",
     "zip": "npm run validate && zip -r now4real-chrome-extension.zip manifest.json src icons README.md -x '**/.DS_Store'"
   },
