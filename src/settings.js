@@ -67,13 +67,19 @@ function getLoadStatusKey() {
   return `now4realLoadStatus:${currentHost}`;
 }
 
+async function getStoredLoadStatus() {
+  const key = getLoadStatusKey();
+  const storedValue = await chrome.storage.local.get(key);
+  return storedValue[key];
+}
+
 async function renderLoadWarning() {
   if (!loadWarningEl || !currentHost) {
     return;
   }
 
-  const status = await chrome.storage.local.get(getLoadStatusKey());
-  const loadStatus = status[getLoadStatusKey()];
+  const loadStatus = await getStoredLoadStatus();
+
   loadWarningEl.hidden = !(loadStatus && loadStatus.status === 'blocked');
   loadWarningEl.textContent = LOAD_WARNING_MESSAGE;
 }
