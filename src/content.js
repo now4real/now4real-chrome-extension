@@ -10,6 +10,7 @@ const LOAD_STATUS_EVENT = 'now4real-extension-load-status';
 const LOAD_WARNING_MESSAGE = 'Now4real could not load on this site because the site blocks third-party scripts.';
 const NOW4REAL_SCRIPT_URL = 'https://cdn.staging.now4real.com/now4real.js';
 const NOW4REAL_SCRIPT_ORIGIN = new URL(NOW4REAL_SCRIPT_URL).origin;
+const NOW4REAL_SOURCE = `now4real-chrome-extension/${chrome.runtime.getManifest().version}`;
 
 function normalizeSettings(settings) {
   return {
@@ -21,7 +22,10 @@ function normalizeSettings(settings) {
 
 function dispatchSettings(settings) {
   window.dispatchEvent(new CustomEvent(SETTINGS_EVENT, {
-    detail: normalizeSettings(settings)
+    detail: {
+      ...normalizeSettings(settings),
+      source: NOW4REAL_SOURCE
+    }
   }));
 }
 

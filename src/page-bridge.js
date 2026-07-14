@@ -9,13 +9,17 @@
   function normalizeSettings(settings) {
     return {
       widgetPosition: settings && settings.widgetPosition === 'right' ? 'right' : 'left',
-      demoMode: Boolean(settings && settings.demoMode)
+      demoMode: Boolean(settings && settings.demoMode),
+      source: typeof (settings && settings.source) === 'string'
+        ? settings.source
+        : 'now4real-chrome-extension/unknown'
     };
   }
 
   function buildConfig(settings) {
     return {
       target: settings.demoMode ? 'demo' : 'widget',
+      source: settings.source,
       widget: {
         align: settings.widgetPosition,
         align_mobile: settings.widgetPosition
