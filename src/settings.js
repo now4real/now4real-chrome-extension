@@ -1,7 +1,7 @@
 const DEFAULT_SETTINGS = {
-  now4realEnabled: true,
+  now4realEnabled: false,
   widgetPosition: 'left',
-  demoMode: false
+  demoMode: true
 };
 
 const now4realEnabledInput = document.querySelector('#now4realEnabled');
@@ -17,9 +17,9 @@ let currentHost = '';
 
 function normalizeSettings(settings) {
   return {
-    now4realEnabled: settings.now4realEnabled !== false,
+    now4realEnabled: Boolean(settings.now4realEnabled),
     widgetPosition: settings.widgetPosition === 'right' ? 'right' : 'left',
-    demoMode: Boolean(settings.demoMode)
+    demoMode: settings.demoMode !== false
   };
 }
 

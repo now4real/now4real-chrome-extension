@@ -1,7 +1,7 @@
 const DEFAULT_SETTINGS = {
-  now4realEnabled: true,
+  now4realEnabled: false,
   widgetPosition: 'left',
-  demoMode: false
+  demoMode: true
 };
 
 const BRIDGE_SCRIPT_ID = 'now4real-extension-page-bridge';
@@ -14,9 +14,9 @@ const NOW4REAL_SOURCE = `now4real-chrome-extension/${chrome.runtime.getManifest(
 
 function normalizeSettings(settings) {
   return {
-    now4realEnabled: settings.now4realEnabled !== false,
+    now4realEnabled: Boolean(settings.now4realEnabled),
     widgetPosition: settings.widgetPosition === 'right' ? 'right' : 'left',
-    demoMode: Boolean(settings.demoMode)
+    demoMode: settings.demoMode !== false
   };
 }
 
