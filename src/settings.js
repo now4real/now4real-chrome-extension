@@ -12,6 +12,10 @@ const loadWarningEl = document.querySelector('#loadWarning');
 const statusEl = document.querySelector('#status');
 
 const LOAD_WARNING_MESSAGE = 'Now4real could not load on this site because the site blocks third-party scripts.';
+const LOAD_STATUS_MESSAGES = {
+  blocked: LOAD_WARNING_MESSAGE,
+  'site-existing': 'Now4real is already provided by this site. The extension did not inject it.'
+};
 
 let currentHost = '';
 
@@ -36,7 +40,7 @@ function render(settings) {
 
   now4realEnabledInput.checked = normalizedSettings.now4realEnabled;
   widgetStateText.textContent = normalizedSettings.now4realEnabled
-    ? 'Widget active on all sites.'
+    ? 'Widget enabled on all sites.'
     : 'Widget disabled on all sites.';
 
   positionInputs.forEach((input) => {
@@ -73,15 +77,19 @@ async function getStoredLoadStatus() {
   return storedValue[key];
 }
 
-async function renderLoadWarning() {
+async function renderLoadStatus() {
   if (!loadWarningEl || !currentHost) {
     return;
   }
 
   const loadStatus = await getStoredLoadStatus();
 
-  loadWarningEl.hidden = !(loadStatus && loadStatus.status === 'blocked');
-  loadWarningEl.textContent = LOAD_WARNING_MESSAGE;
+  const shouldShowStatus = loadStatus && ['blocked', 'site-existing'].includes(loadStatus.status);
+  loadWarningEl.hidden = !shouldShowStatus;
+  loadWarningEl.dataset.state = loadStatus ? loadStatus.status : '';
+  loadWarningEl.textContent = shouldShowStatus
+    ? (loadStatus.message || LOAD_STATUS_MESSAGES[loadStatus.status] || '')
+    : '';
 }
 
 async function saveSettings() {
@@ -117,7 +125,7 @@ async function init() {
 
   const settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
   render(settings);
-  await renderLoadWarning();
+  await renderLoadStatus();
 
   now4realEnabledInput.addEventListener('change', saveSettings);
   positionInputs.forEach((input) => {

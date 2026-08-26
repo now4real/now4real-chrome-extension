@@ -36,9 +36,10 @@ Current injection flow:
 1. The background service worker observes the `main_frame` response through `chrome.webRequest.onHeadersReceived` and inspects the `Content-Security-Policy` header.
 2. The background stores an in-memory verdict for the current tab: the Now4real CDN is either allowed, blocked, or not known yet.
 3. The content script starts at `document_idle`, reads the current settings, and asks the background for that verdict before injecting anything into the page.
-4. The content script also checks any `meta http-equiv="Content-Security-Policy"` declarations already present in the DOM.
-5. Only if the page does not appear to block the Now4real CDN does the content script inject `src/page-bridge.js` into the page context.
-6. The bridge prepares `window.now4real.config` and loads the Now4real CDN script.
+4. Before CSP checks, the content script detects an existing native Now4real loader for production, staging, or local development and waits two seconds for dynamically added loader scripts. If one is found, the extension does nothing and preserves the site's own configuration.
+5. The content script also checks any `meta http-equiv="Content-Security-Policy"` declarations already present in the DOM.
+6. Only if the page does not appear to block the Now4real CDN does the content script inject `src/page-bridge.js` into the page context.
+7. The bridge prepares `window.now4real.config` and loads the Now4real CDN script.
 
 This is a best-effort CSP pre-check. In most cases the background has already inspected the response headers before the content script asks for the verdict, because `onHeadersReceived` happens early in navigation and `document_idle` runs later. However, this is not a strict synchronization guarantee. The background and the content script are separate extension contexts, so there can still be edge cases where the verdict is not available yet when the content script starts.
 

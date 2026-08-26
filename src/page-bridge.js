@@ -3,6 +3,11 @@
   const SETTINGS_EVENT = 'now4real-extension-settings';
   const LOAD_STATUS_EVENT = 'now4real-extension-load-status';
   const NOW4REAL_SCRIPT_URL = 'https://cdn.staging.now4real.com/now4real.js';
+  const NOW4REAL_SCRIPT_ENDPOINTS = [
+    { protocol: 'https:', hostname: 'cdn.now4real.com', port: '', pathname: '/now4real.js' },
+    { protocol: 'https:', hostname: 'cdn.staging.now4real.com', port: '', pathname: '/now4real.js' },
+    { protocol: 'http:', hostname: 'localhost.cdn.localtest.me', port: '3000', pathname: '/now4real.js' }
+  ];
 
   let loadRequested = false;
 
@@ -33,9 +38,19 @@
   }
 
   function hasNow4realScript() {
-    return Array.from(document.querySelectorAll('script[src]')).some((script) => (
-      script.src === NOW4REAL_SCRIPT_URL || script.getAttribute('src') === NOW4REAL_SCRIPT_URL
-    ));
+    return Array.from(document.querySelectorAll('script[src]')).some((script) => {
+      try {
+        const url = new URL(script.getAttribute('src') || script.src, document.baseURI);
+        return NOW4REAL_SCRIPT_ENDPOINTS.some((endpoint) => (
+          url.protocol === endpoint.protocol
+          && url.hostname === endpoint.hostname
+          && url.port === endpoint.port
+          && url.pathname === endpoint.pathname
+        ));
+      } catch (error) {
+        return false;
+      }
+    });
   }
 
   function createTrustedScriptUrl(url) {
@@ -90,6 +105,11 @@
 
   function update(settings) {
     const currentSettings = normalizeSettings(settings);
+    if (hasNow4realScript()) {
+      dispatchLoadStatus('site-existing');
+      return;
+    }
+
     applyConfig(currentSettings);
     loadNow4real();
   }

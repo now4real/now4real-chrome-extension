@@ -53,24 +53,32 @@ function sourceAllowsNow4real(source) {
     return false;
   }
 
-  if (source === '*' || source === 'https:') {
+  const now4realUrl = new URL(NOW4REAL_SCRIPT_URL);
+
+  if (source === '*' || source === now4realUrl.protocol) {
     return true;
   }
 
-  if (source.startsWith('https://')) {
+  if (source.startsWith(`${now4realUrl.protocol}//`)) {
     if (source === NOW4REAL_SCRIPT_ORIGIN || source === NOW4REAL_SCRIPT_URL) {
       return true;
     }
 
-    if (source.startsWith('https://*.')) {
-      const wildcardHost = source.slice('https://*.'.length);
-      return new URL(NOW4REAL_SCRIPT_URL).hostname.endsWith(`.${wildcardHost}`);
+    if (source.startsWith(`${now4realUrl.protocol}//*.`)) {
+      const wildcardHost = source.slice(`${now4realUrl.protocol}//*.`.length);
+      return now4realUrl.hostname.endsWith(`.${wildcardHost}`);
+    }
+
+    try {
+      return new URL(source).origin === NOW4REAL_SCRIPT_ORIGIN;
+    } catch (error) {
+      return false;
     }
   }
 
   if (source.startsWith('*.')) {
     const wildcardHost = source.slice(2);
-    return new URL(NOW4REAL_SCRIPT_URL).hostname.endsWith(`.${wildcardHost}`);
+    return now4realUrl.hostname.endsWith(`.${wildcardHost}`);
   }
 
   return false;

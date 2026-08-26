@@ -8,9 +8,16 @@ const BRIDGE_SCRIPT_ID = 'now4real-extension-page-bridge';
 const SETTINGS_EVENT = 'now4real-extension-settings';
 const LOAD_STATUS_EVENT = 'now4real-extension-load-status';
 const LOAD_WARNING_MESSAGE = 'Now4real could not load on this site because the site blocks third-party scripts.';
+const NATIVE_SCRIPT_MESSAGE = 'Now4real is already provided by this site. The extension did not inject it.';
 const NOW4REAL_SCRIPT_URL = 'https://cdn.staging.now4real.com/now4real.js';
 const NOW4REAL_SCRIPT_ORIGIN = new URL(NOW4REAL_SCRIPT_URL).origin;
 const NOW4REAL_SOURCE = `now4real-chrome-extension/${chrome.runtime.getManifest().version}`;
+const NATIVE_SCRIPT_DETECTION_DELAY_MS = 2000;
+const NOW4REAL_SCRIPT_ENDPOINTS = [
+  { protocol: 'https:', hostname: 'cdn.now4real.com', port: '', pathname: '/now4real.js' },
+  { protocol: 'https:', hostname: 'cdn.staging.now4real.com', port: '', pathname: '/now4real.js' },
+  { protocol: 'http:', hostname: 'localhost.cdn.localtest.me', port: '3000', pathname: '/now4real.js' }
+];
 
 function normalizeSettings(settings) {
   return {
@@ -44,10 +51,14 @@ async function getStoredLoadStatus() {
 }
 
 async function setBlockedStatus() {
+  await setLoadStatus('blocked', LOAD_WARNING_MESSAGE);
+}
+
+async function setLoadStatus(status, message) {
   await chrome.storage.local.set({
     [getLoadStatusKey()]: {
-      status: 'blocked',
-      message: LOAD_WARNING_MESSAGE,
+      status,
+      message,
       updatedAt: Date.now()
     }
   });
@@ -84,24 +95,32 @@ function sourceAllowsNow4real(source) {
     return false;
   }
 
-  if (source === '*' || source === 'https:') {
+  const now4realUrl = new URL(NOW4REAL_SCRIPT_URL);
+
+  if (source === '*' || source === now4realUrl.protocol) {
     return true;
   }
 
-  if (source.startsWith('https://')) {
+  if (source.startsWith(`${now4realUrl.protocol}//`)) {
     if (source === NOW4REAL_SCRIPT_ORIGIN || source === NOW4REAL_SCRIPT_URL) {
       return true;
     }
 
-    if (source.startsWith('https://*.')) {
-      const wildcardHost = source.slice('https://*.'.length);
-      return new URL(NOW4REAL_SCRIPT_URL).hostname.endsWith(`.${wildcardHost}`);
+    if (source.startsWith(`${now4realUrl.protocol}//*.`)) {
+      const wildcardHost = source.slice(`${now4realUrl.protocol}//*.`.length);
+      return now4realUrl.hostname.endsWith(`.${wildcardHost}`);
+    }
+
+    try {
+      return new URL(source).origin === NOW4REAL_SCRIPT_ORIGIN;
+    } catch (error) {
+      return false;
     }
   }
 
   if (source.startsWith('*.')) {
     const wildcardHost = source.slice(2);
-    return new URL(NOW4REAL_SCRIPT_URL).hostname.endsWith(`.${wildcardHost}`);
+    return now4realUrl.hostname.endsWith(`.${wildcardHost}`);
   }
 
   return false;
@@ -136,6 +155,61 @@ function getMetaCspPolicies() {
     .filter(Boolean);
 }
 
+function isNow4realScriptUrl(scriptUrl) {
+  try {
+    const url = new URL(scriptUrl, document.baseURI);
+    return NOW4REAL_SCRIPT_ENDPOINTS.some((endpoint) => (
+      url.protocol === endpoint.protocol
+      && url.hostname === endpoint.hostname
+      && url.port === endpoint.port
+      && url.pathname === endpoint.pathname
+    ));
+  } catch (error) {
+    return false;
+  }
+}
+
+function hasNativeNow4realScript() {
+  return Array.from(document.querySelectorAll('script[src]')).some((script) => (
+    isNow4realScriptUrl(script.getAttribute('src') || script.src)
+  ));
+}
+
+function waitForNativeNow4realScript() {
+  if (hasNativeNow4realScript()) {
+    return Promise.resolve(true);
+  }
+
+  return new Promise((resolve) => {
+    const observer = new MutationObserver((mutations) => {
+      const scriptAdded = mutations.some((mutation) => (
+        Array.from(mutation.addedNodes).some((node) => (
+          node.nodeType === Node.ELEMENT_NODE
+          && (
+            (node.matches && node.matches('script[src]') && isNow4realScriptUrl(node.getAttribute('src') || node.src))
+            || (node.querySelector && Array.from(node.querySelectorAll('script[src]')).some((script) => (
+              isNow4realScriptUrl(script.getAttribute('src') || script.src)
+            )))
+          )
+        ))
+      ));
+
+      if (scriptAdded) {
+        observer.disconnect();
+        window.clearTimeout(timeoutId);
+        resolve(true);
+      }
+    });
+
+    const timeoutId = window.setTimeout(() => {
+      observer.disconnect();
+      resolve(hasNativeNow4realScript());
+    }, NATIVE_SCRIPT_DETECTION_DELAY_MS);
+
+    observer.observe(document.documentElement, { childList: true, subtree: true });
+  });
+}
+
 async function shouldSkipInjection() {
   if (getMetaCspPolicies().some(policyBlocksNow4real)) {
     await setBlockedStatus();
@@ -161,6 +235,11 @@ async function shouldSkipInjection() {
 }
 
 async function handleLoadStatus(status) {
+  if (status === 'site-existing') {
+    await setLoadStatus('site-existing', NATIVE_SCRIPT_MESSAGE);
+    return;
+  }
+
   if (status === 'blocked') {
     await setBlockedStatus();
     return;
@@ -198,6 +277,12 @@ async function init() {
 
   const settings = await loadSettings();
   if (!settings.now4realEnabled) {
+    return;
+  }
+
+  if (await waitForNativeNow4realScript()) {
+    await setLoadStatus('site-existing', NATIVE_SCRIPT_MESSAGE);
+    console.info('Now4real extension skipped injection because an existing Now4real script was found on this page.');
     return;
   }
 

@@ -24,7 +24,7 @@ body {
 }
 
 .popup-shell {
-  width: 340px;
+  width: 360px;
   min-height: 360px;
 }
 
@@ -92,28 +92,25 @@ p {
   line-height: 1.45;
 }
 
-code {
-  padding: 1px 4px;
-  border-radius: 4px;
-  color: var(--accent-strong);
-  background: var(--accent-soft);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 12px;
-}
-
 .setting-group {
   padding: 18px 0;
   border-bottom: 1px solid var(--line);
 }
 
 .load-warning {
-  margin-top: 14px;
+  margin-bottom: 14px;
   padding: 10px 12px;
-  border: 1px solid #f0c6c6;
+  border: 1px solid #b8ddec;
   border-radius: 8px;
+  color: #17658a;
+  background: #edf8fd;
+  font-weight: 700;
+}
+
+.load-warning[data-state='blocked'] {
+  border-color: #f0c6c6;
   color: #8f1f1f;
   background: #fff1f1;
-  font-weight: 700;
 }
 
 .segmented-control {
@@ -162,16 +159,14 @@ code {
   outline-offset: 2px;
 }
 
-.demo-row,
-.top-toggle {
+.demo-row {
   display: flex;
   gap: 18px;
   align-items: center;
   justify-content: space-between;
 }
 
-.demo-row div,
-.top-toggle div {
+.demo-row div {
   display: grid;
   gap: 5px;
 }
