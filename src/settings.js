@@ -101,6 +101,10 @@ async function saveSettings() {
   });
 
   await chrome.storage.sync.set(settings);
+  await chrome.runtime.sendMessage({
+    type: 'now4real:update-action-icon',
+    now4realEnabled: settings.now4realEnabled
+  });
   render(settings);
   await refreshCurrentTab();
   setStatus('Settings saved. Current tab refreshed.');

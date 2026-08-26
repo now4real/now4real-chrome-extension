@@ -7,6 +7,7 @@
   --accent: #39aae1;
   --accent-strong: #1776a8;
   --accent-soft: #e2f4fc;
+  --control-inactive: #9ba9b3;
   --shadow: 0 18px 45px rgba(39, 43, 39, 0.14);
 }
 
@@ -66,8 +67,8 @@ body {
   width: 48px;
   height: 48px;
   flex: 0 0 auto;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(32, 40, 37, 0.12);
+  border: 0;
+  background: #fff;
 }
 
 h1,
@@ -173,8 +174,8 @@ p {
 
 .switch {
   position: relative;
-  width: 54px;
-  height: 32px;
+  width: 48px;
+  height: 28px;
   flex: 0 0 auto;
 }
 
@@ -186,7 +187,7 @@ p {
   position: absolute;
   inset: 0;
   border-radius: 999px;
-  background: #cfd8df;
+  background: var(--control-inactive);
   cursor: pointer;
   transition: background 160ms ease;
 }
@@ -196,8 +197,8 @@ p {
   position: absolute;
   top: 4px;
   left: 4px;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 2px 7px rgba(32, 40, 37, 0.2);
@@ -209,7 +210,58 @@ p {
 }
 
 .switch input:checked + span::after {
-  transform: translateX(22px);
+  transform: translateX(20px);
+}
+
+.power-switch {
+  width: 46px;
+  height: 46px;
+}
+
+.power-switch span {
+  display: grid;
+  place-items: center;
+  background: var(--control-inactive);
+  box-shadow: none;
+  transition: background 160ms ease;
+}
+
+.power-switch span::before,
+.power-switch span::after {
+  content: '';
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.power-switch span::before {
+  z-index: 1;
+  top: 11px;
+  left: 21.5px;
+  width: 3px;
+  height: 11px;
+  border-radius: 4px;
+  background: #fff;
+}
+
+.power-switch span::after {
+  top: 12px;
+  left: 12px;
+  width: 22px;
+  height: 22px;
+  border: 3.5px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: none;
+  transform: none;
+}
+
+.power-switch input:checked + span {
+  background: var(--accent);
+}
+
+.power-switch input:checked + span::after {
+  transform: none;
 }
 
 .status {

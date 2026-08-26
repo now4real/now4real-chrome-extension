@@ -2,6 +2,47 @@ const LOAD_WARNING_MESSAGE = 'Now4real could not load on this site because the s
 const NOW4REAL_SCRIPT_URL = 'https://cdn.staging.now4real.com/now4real.js';
 const NOW4REAL_SCRIPT_ORIGIN = new URL(NOW4REAL_SCRIPT_URL).origin;
 const tabCspVerdicts = new Map();
+const ACTION_ICONS = {
+  active: {
+    16: 'icons/icon16.png',
+    32: 'icons/icon32.png',
+    48: 'icons/icon48.png',
+    128: 'icons/icon128.png'
+  },
+  inactive: {
+    16: 'icons/icon16-disabled.png',
+    32: 'icons/icon32-disabled.png',
+    48: 'icons/icon48-disabled.png',
+    128: 'icons/icon128-disabled.png'
+  }
+};
+
+async function setActionIcon(now4realEnabled) {
+  const paths = now4realEnabled ? ACTION_ICONS.active : ACTION_ICONS.inactive;
+  const imageDataEntries = await Promise.all(Object.entries(paths).map(async ([size, path]) => {
+    const response = await fetch(chrome.runtime.getURL(path));
+
+    if (!response.ok) {
+      throw new Error(`Unable to load action icon: ${path}`);
+    }
+
+    const bitmap = await createImageBitmap(await response.blob());
+    const dimension = Number(size);
+    const canvas = new OffscreenCanvas(dimension, dimension);
+    const context = canvas.getContext('2d');
+    context.drawImage(bitmap, 0, 0, dimension, dimension);
+    bitmap.close();
+
+    return [size, context.getImageData(0, 0, dimension, dimension)];
+  }));
+
+  await chrome.action.setIcon({ imageData: Object.fromEntries(imageDataEntries) });
+}
+
+async function updateActionIcon() {
+  const { now4realEnabled = false } = await chrome.storage.sync.get({ now4realEnabled: false });
+  await setActionIcon(now4realEnabled);
+}
 
 function normalizeHost(host) {
   return String(host || '').toLowerCase().replace(/^www\./, '');
@@ -182,7 +223,30 @@ chrome.tabs.onRemoved.addListener((tabId) => {
   tabCspVerdicts.delete(tabId);
 });
 
+chrome.runtime.onInstalled.addListener(() => {
+  void updateActionIcon();
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  void updateActionIcon();
+});
+
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync' && changes.now4realEnabled) {
+    void updateActionIcon();
+  }
+});
+
+void updateActionIcon();
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message && message.type === 'now4real:update-action-icon') {
+    setActionIcon(Boolean(message.now4realEnabled))
+      .then(() => sendResponse({ ok: true }))
+      .catch((error) => sendResponse({ error: String(error) }));
+    return true;
+  }
+
   if (!message || message.type !== 'now4real:get-csp-verdict') {
     return false;
   }
