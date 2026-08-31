@@ -26,6 +26,9 @@ body {
 
 .popup-shell {
   width: 360px;
+}
+
+.popup-shell[data-demo-mode='true'] {
   min-height: 360px;
 }
 

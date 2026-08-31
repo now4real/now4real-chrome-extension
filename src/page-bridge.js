@@ -22,14 +22,19 @@
   }
 
   function buildConfig(settings) {
-    return {
+    const config = {
       target: settings.demoMode ? 'demo' : 'widget',
-      source: settings.source,
-      widget: {
+      source: settings.source
+    };
+
+    if (settings.demoMode) {
+      config.widget = {
         align: settings.widgetPosition,
         align_mobile: settings.widgetPosition
-      }
-    };
+      };
+    }
+
+    return config;
   }
 
   function applyConfig(settings) {

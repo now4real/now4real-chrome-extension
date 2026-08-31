@@ -22,7 +22,18 @@
         </label>
       </header>
 
-      <section class="setting-group" aria-labelledby="position-title">
+      <section class="setting-group demo-row">
+        <div>
+          <h2>Demo mode</h2>
+          <p>When demo mode is on, you chat only with bots, and all counts, rankings, and maps are simulated. Turn it off to chat with other people using this extension on the same sites as you.</p>
+        </div>
+        <label class="switch" aria-label="Enable demo mode">
+          <input id="demoMode" type="checkbox">
+          <span></span>
+        </label>
+      </section>
+
+      <section id="widgetPositionSetting" class="setting-group" aria-labelledby="position-title" hidden>
         <h2 id="position-title">Widget position</h2>
         <div class="segmented-control">
           <label>
@@ -34,17 +45,6 @@
             <span>Right</span>
           </label>
         </div>
-      </section>
-
-      <section class="setting-group demo-row">
-        <div>
-          <h2>Demo mode</h2>
-          <p>When demo mode is on, you chat only with bots, and all counts, rankings, and maps are simulated. Turn it off to chat with other people using this extension on the same sites as you.</p>
-        </div>
-        <label class="switch" aria-label="Enable demo mode">
-          <input id="demoMode" type="checkbox">
-          <span></span>
-        </label>
       </section>
 
       <p id="status" class="status" role="status" aria-live="polite"></p>

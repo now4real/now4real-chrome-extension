@@ -7,6 +7,7 @@ const DEFAULT_SETTINGS = {
 const now4realEnabledInput = document.querySelector('#now4realEnabled');
 const widgetStateText = document.querySelector('#widgetStateText');
 const positionInputs = document.querySelectorAll('input[name="widgetPosition"]');
+const widgetPositionSetting = document.querySelector('#widgetPositionSetting');
 const demoModeInput = document.querySelector('#demoMode');
 const loadWarningEl = document.querySelector('#loadWarning');
 const statusEl = document.querySelector('#status');
@@ -48,6 +49,8 @@ function render(settings) {
   });
 
   demoModeInput.checked = normalizedSettings.demoMode;
+  document.body.dataset.demoMode = normalizedSettings.demoMode;
+  widgetPositionSetting.hidden = !normalizedSettings.demoMode;
 }
 
 function normalizeHost(host) {
