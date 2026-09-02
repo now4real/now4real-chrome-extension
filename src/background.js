@@ -185,12 +185,16 @@ chrome.webRequest.onHeadersReceived.addListener(
     }
 
     const policy = getHeaderValue(details.responseHeaders, 'content-security-policy');
+    const responseContentType = getHeaderValue(details.responseHeaders, 'content-type')
+      .split(';', 1)[0]
+      .trim()
+      .toLowerCase();
     const host = normalizeHost(parsedUrl.hostname);
     const tabId = Number.isInteger(details.tabId) ? details.tabId : -1;
 
     if (!policy) {
       if (tabId >= 0) {
-        tabCspVerdicts.set(tabId, { blocked: false, host, known: false });
+        tabCspVerdicts.set(tabId, { blocked: false, host, known: false, responseContentType });
       }
 
       void clearAllowedStatus(host);
@@ -199,7 +203,7 @@ chrome.webRequest.onHeadersReceived.addListener(
 
     if (policyBlocksNow4real(policy)) {
       if (tabId >= 0) {
-        tabCspVerdicts.set(tabId, { blocked: true, host, known: true });
+        tabCspVerdicts.set(tabId, { blocked: true, host, known: true, responseContentType });
       }
 
       void setBlockedStatus(host);
@@ -207,7 +211,7 @@ chrome.webRequest.onHeadersReceived.addListener(
     }
 
     if (tabId >= 0) {
-      tabCspVerdicts.set(tabId, { blocked: false, host, known: true });
+      tabCspVerdicts.set(tabId, { blocked: false, host, known: true, responseContentType });
     }
 
     void clearAllowedStatus(host);
@@ -254,6 +258,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   const tabId = sender.tab && Number.isInteger(sender.tab.id) ? sender.tab.id : -1;
   const verdict = tabId >= 0 ? tabCspVerdicts.get(tabId) : null;
 
-  sendResponse(verdict || { blocked: false, known: false, host: '' });
+  sendResponse(verdict || { blocked: false, known: false, host: '', responseContentType: '' });
   return false;
 });

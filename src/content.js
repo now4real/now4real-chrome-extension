@@ -37,6 +37,18 @@ function isSupportedHtmlDocument() {
     && root.namespaceURI === 'http://www.w3.org/1999/xhtml';
 }
 
+async function hasSupportedResponseContentType() {
+  try {
+    const verdict = await chrome.runtime.sendMessage({ type: 'now4real:get-csp-verdict' });
+    const responseContentType = String(verdict && verdict.responseContentType || '').toLowerCase();
+
+    return !responseContentType || responseContentType === 'text/html';
+  } catch (error) {
+    console.warn('Unable to read the main-frame response content type from the extension worker.', error);
+    return true;
+  }
+}
+
 function dispatchSettings(settings) {
   window.dispatchEvent(new CustomEvent(SETTINGS_EVENT, {
     detail: {
@@ -287,6 +299,10 @@ async function init() {
 
   const settings = await loadSettings();
   if (!settings.now4realEnabled) {
+    return;
+  }
+
+  if (!await hasSupportedResponseContentType()) {
     return;
   }
 
