@@ -27,6 +27,16 @@ function normalizeSettings(settings) {
   };
 }
 
+function isSupportedHtmlDocument() {
+  const contentType = String(document.contentType || '').split(';', 1)[0].trim().toLowerCase();
+  const root = document.documentElement;
+
+  return contentType === 'text/html'
+    && root
+    && root.localName === 'html'
+    && root.namespaceURI === 'http://www.w3.org/1999/xhtml';
+}
+
 function dispatchSettings(settings) {
   window.dispatchEvent(new CustomEvent(SETTINGS_EVENT, {
     detail: {
@@ -271,7 +281,7 @@ async function loadSettings() {
 }
 
 async function init() {
-  if (!document.documentElement) {
+  if (!isSupportedHtmlDocument()) {
     return;
   }
 
