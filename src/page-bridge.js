@@ -2,7 +2,7 @@
   const CDN_SCRIPT_ID = 'now4real-cdn-script';
   const SETTINGS_EVENT = 'now4real-extension-settings';
   const LOAD_STATUS_EVENT = 'now4real-extension-load-status';
-  const NOW4REAL_SCRIPT_URL = 'https://cdn.staging.now4real.com/now4real.js';
+  const NOW4REAL_SCRIPT_URL = 'https://cdn.now4real.com/now4real.js';
   const NOW4REAL_SCRIPT_ENDPOINTS = [
     { protocol: 'https:', hostname: 'cdn.now4real.com', port: '', pathname: '/now4real.js' },
     { protocol: 'https:', hostname: 'cdn.staging.now4real.com', port: '', pathname: '/now4real.js' },

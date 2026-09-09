@@ -1,5 +1,5 @@
 const LOAD_WARNING_MESSAGE = 'Now4real could not load on this site because the site blocks third-party scripts.';
-const NOW4REAL_SCRIPT_URL = 'https://cdn.staging.now4real.com/now4real.js';
+const NOW4REAL_SCRIPT_URL = 'https://cdn.now4real.com/now4real.js';
 const NOW4REAL_SCRIPT_ORIGIN = new URL(NOW4REAL_SCRIPT_URL).origin;
 const tabCspVerdicts = new Map();
 const ACTION_ICONS = {
