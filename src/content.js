@@ -23,7 +23,18 @@ function normalizeSettings(settings) {
   return {
     now4realEnabled: Boolean(settings.now4realEnabled),
     widgetPosition: settings.widgetPosition === 'right' ? 'right' : 'left',
-    demoMode: settings.demoMode !== false
+    demoMode: settings.demoMode !== false,
+    widgetColors: normalizeWidgetColors(settings.widgetColors)
+  };
+}
+
+function normalizeWidgetColors(colors) {
+  const background = colors && (colors.background || colors.color_external_background);
+  const text = colors && (colors.text || colors.color_external_text);
+
+  return {
+    ...( /^#[0-9a-f]{6}$/i.test(background) ? { background: background.toLowerCase() } : {}),
+    ...( /^#[0-9a-f]{6}$/i.test(text) ? { text: text.toLowerCase() } : {})
   };
 }
 
@@ -289,7 +300,10 @@ function injectBridge() {
 
 async function loadSettings() {
   const settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
-  return normalizeSettings(settings);
+  const host = normalizeHost(window.location.hostname);
+  const colorKey = `now4realWidgetColors:${host}`;
+  const storedColors = host ? await chrome.storage.sync.get(colorKey) : {};
+  return normalizeSettings({ ...settings, widgetColors: storedColors[colorKey] });
 }
 
 async function init() {

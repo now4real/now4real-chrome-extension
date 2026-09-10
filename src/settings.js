@@ -3,11 +3,19 @@ const DEFAULT_SETTINGS = {
   widgetPosition: 'left',
   demoMode: true
 };
+const DEFAULT_WIDGET_COLORS = {
+  background: '#39aae1',
+  text: '#ffffff'
+};
 
 const now4realEnabledInput = document.querySelector('#now4realEnabled');
 const widgetStateText = document.querySelector('#widgetStateText');
 const positionInputs = document.querySelectorAll('input[name="widgetPosition"]');
 const widgetPositionSetting = document.querySelector('#widgetPositionSetting');
+const widgetColorSetting = document.querySelector('#widgetColorSetting');
+const widgetColorInputs = document.querySelectorAll('input[data-widget-color]');
+const widgetColorValues = document.querySelectorAll('[data-widget-color-value]');
+const resetWidgetColorsButton = document.querySelector('#resetWidgetColors');
 const demoModeInput = document.querySelector('#demoMode');
 const loadWarningEl = document.querySelector('#loadWarning');
 const statusEl = document.querySelector('#status');
@@ -19,6 +27,25 @@ const LOAD_STATUS_MESSAGES = {
 };
 
 let currentHost = '';
+
+function getWidgetColorsKey() {
+  return `now4realWidgetColors:${currentHost}`;
+}
+
+function normalizeWidgetColors(colors) {
+  return Object.fromEntries(Object.entries(DEFAULT_WIDGET_COLORS).map(([name, defaultValue]) => {
+    const legacyName = name === 'background' ? 'color_external_background' : 'color_external_text';
+    const value = colors && (colors[name] || colors[legacyName]);
+    return [name, /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : defaultValue];
+  }));
+}
+
+function hasCustomWidgetColors(colors) {
+  const normalizedColors = normalizeWidgetColors(colors);
+  return Object.keys(DEFAULT_WIDGET_COLORS).some((name) => (
+    normalizedColors[name] !== DEFAULT_WIDGET_COLORS[name]
+  ));
+}
 
 function normalizeSettings(settings) {
   return {
@@ -51,6 +78,18 @@ function render(settings) {
   demoModeInput.checked = normalizedSettings.demoMode;
   document.body.dataset.demoMode = normalizedSettings.demoMode;
   widgetPositionSetting.hidden = !normalizedSettings.demoMode;
+  widgetColorSetting.hidden = !normalizedSettings.demoMode;
+}
+
+function renderWidgetColors(colors) {
+  const normalizedColors = normalizeWidgetColors(colors);
+  widgetColorInputs.forEach((input) => {
+    input.value = normalizedColors[input.dataset.widgetColor];
+  });
+  widgetColorValues.forEach((value) => {
+    value.value = normalizedColors[value.dataset.widgetColorValue].toUpperCase();
+  });
+  resetWidgetColorsButton.hidden = !hasCustomWidgetColors(colors);
 }
 
 function normalizeHost(host) {
@@ -113,6 +152,32 @@ async function saveSettings() {
   setStatus('Settings saved. Current tab refreshed.');
 }
 
+async function saveWidgetColors() {
+  if (!currentHost) {
+    return;
+  }
+
+  const colors = Object.fromEntries(Array.from(widgetColorInputs, (input) => [
+    input.dataset.widgetColor,
+    input.value
+  ]));
+  await chrome.storage.sync.set({ [getWidgetColorsKey()]: normalizeWidgetColors(colors) });
+  resetWidgetColorsButton.hidden = false;
+  await refreshCurrentTab();
+  setStatus('Widget colors saved. Current tab refreshed.');
+}
+
+async function resetWidgetColors() {
+  if (!currentHost) {
+    return;
+  }
+
+  await chrome.storage.sync.remove(getWidgetColorsKey());
+  renderWidgetColors(DEFAULT_WIDGET_COLORS);
+  await refreshCurrentTab();
+  setStatus('Default widget colors restored. Current tab refreshed.');
+}
+
 async function refreshCurrentTab() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   if (!tab || !Number.isInteger(tab.id) || !tab.url || tab.url.startsWith('chrome://')) {
@@ -132,6 +197,12 @@ async function init() {
 
   const settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
   render(settings);
+  if (currentHost) {
+    const storedColors = await chrome.storage.sync.get(getWidgetColorsKey());
+    renderWidgetColors(storedColors[getWidgetColorsKey()]);
+  } else {
+    renderWidgetColors(DEFAULT_WIDGET_COLORS);
+  }
   await renderLoadStatus();
 
   now4realEnabledInput.addEventListener('change', saveSettings);
@@ -139,6 +210,8 @@ async function init() {
     input.addEventListener('change', saveSettings);
   });
   demoModeInput.addEventListener('change', saveSettings);
+  widgetColorInputs.forEach((input) => input.addEventListener('change', saveWidgetColors));
+  resetWidgetColorsButton.addEventListener('click', resetWidgetColors);
 }
 
 init();

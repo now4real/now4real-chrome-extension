@@ -6,6 +6,7 @@ Chrome Manifest V3 extension that injects the Now4real widget into pages visited
 
 - Automatic injection of the configured Now4real CDN script only on top-level HTML pages (`text/html`). The response `Content-Type` is also checked so XML documents rendered as HTML through XSLT, including sitemaps, are excluded along with PDFs, SVGs, images, media, downloads, API responses, and other non-HTML documents.
 - Extension popup menu for turning Now4real on or off and choosing the widget position: left or right.
+- Per-domain background and text color controls applied to both the closed and open widget, with restoration of the Now4real defaults.
 - Chrome Options page with the same controls.
 - Demo mode that chats only with bots and simulates counts, rankings, and maps, using `now4real.config.target = 'demo'`.
 - Settings saved with `chrome.storage.sync`; changing a setting refreshes the current tab so the widget starts with the new configuration.

@@ -47,6 +47,31 @@
         </div>
       </section>
 
+      <section id="widgetColorSetting" class="setting-group" aria-labelledby="color-title" hidden>
+        <div class="setting-heading">
+          <div>
+            <h2 id="color-title">Widget colors</h2>
+          </div>
+          <button id="resetWidgetColors" class="text-button" type="button" hidden>Use default</button>
+        </div>
+        <div class="color-controls">
+          <div class="color-control">
+            <div class="color-copy">
+              <span class="color-label">Background</span>
+              <output for="widgetBackgroundColor" data-widget-color-value="background">#39AAE1</output>
+            </div>
+            <input id="widgetBackgroundColor" type="color" data-widget-color="background" aria-label="Widget background color">
+          </div>
+          <div class="color-control">
+            <div class="color-copy">
+              <span class="color-label">Text</span>
+              <output for="widgetTextColor" data-widget-color-value="text">#FFFFFF</output>
+            </div>
+            <input id="widgetTextColor" type="color" data-widget-color="text" aria-label="Widget text color">
+          </div>
+        </div>
+      </section>
+
       <p id="status" class="status" role="status" aria-live="polite"></p>
     </main>
     <script src="settings.js"></script>

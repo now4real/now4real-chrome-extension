@@ -15,23 +15,42 @@
     return {
       widgetPosition: settings && settings.widgetPosition === 'right' ? 'right' : 'left',
       demoMode: Boolean(settings && settings.demoMode),
+      widgetColors: normalizeWidgetColors(settings && settings.widgetColors),
       source: typeof (settings && settings.source) === 'string'
         ? settings.source
         : 'now4real-chrome-extension/unknown'
     };
   }
 
+  function normalizeWidgetColors(colors) {
+    const background = colors && colors.background;
+    const text = colors && colors.text;
+
+    return {
+      ...( /^#[0-9a-f]{6}$/i.test(background) ? {
+        color_external_background: background.toLowerCase(),
+        color_internal_background: background.toLowerCase()
+      } : {}),
+      ...( /^#[0-9a-f]{6}$/i.test(text) ? {
+        color_external_text: text.toLowerCase(),
+        color_internal_text: text.toLowerCase()
+      } : {})
+    };
+  }
+
   function buildConfig(settings) {
     const config = {
       target: settings.demoMode ? 'demo' : 'widget',
-      source: settings.source
+      source: settings.source,
+      widget: {}
     };
 
     if (settings.demoMode) {
-      config.widget = {
+      Object.assign(config.widget, {
+        ...settings.widgetColors,
         align: settings.widgetPosition,
         align_mobile: settings.widgetPosition
-      };
+      });
     }
 
     return config;
