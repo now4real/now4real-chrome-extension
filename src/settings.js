@@ -1,5 +1,4 @@
 const DEFAULT_SETTINGS = {
-  now4realEnabled: false,
   widgetPosition: 'left',
   demoMode: true
 };
@@ -10,6 +9,7 @@ const DEFAULT_WIDGET_COLORS = {
 
 const now4realEnabledInput = document.querySelector('#now4realEnabled');
 const widgetStateText = document.querySelector('#widgetStateText');
+const siteSettingsEl = document.querySelector('#siteSettings');
 const positionInputs = document.querySelectorAll('input[name="widgetPosition"]');
 const widgetPositionSetting = document.querySelector('#widgetPositionSetting');
 const widgetColorSetting = document.querySelector('#widgetColorSetting');
@@ -30,6 +30,14 @@ let currentHost = '';
 
 function getWidgetColorsKey() {
   return `now4realWidgetColors:${currentHost}`;
+}
+
+function getWidgetPositionKey() {
+  return `now4realWidgetPosition:${currentHost}`;
+}
+
+function getDemoModeKey() {
+  return `now4realDemoMode:${currentHost}`;
 }
 
 function normalizeWidgetColors(colors) {
@@ -67,9 +75,11 @@ function render(settings) {
   const normalizedSettings = normalizeSettings(settings);
 
   now4realEnabledInput.checked = normalizedSettings.now4realEnabled;
-  widgetStateText.textContent = normalizedSettings.now4realEnabled
-    ? 'Widget enabled on all sites.'
-    : 'Widget disabled on all sites.';
+  widgetStateText.textContent = currentHost
+    ? (normalizedSettings.now4realEnabled
+      ? 'Widget enabled on this site.'
+      : 'Widget disabled on this site.')
+    : 'Widget unavailable on this page.';
 
   positionInputs.forEach((input) => {
     input.checked = input.value === normalizedSettings.widgetPosition;
@@ -121,6 +131,8 @@ async function getStoredLoadStatus() {
 
 async function renderLoadStatus() {
   if (!loadWarningEl || !currentHost) {
+    siteSettingsEl.hidden = false;
+    delete document.body.dataset.loadStatus;
     return;
   }
 
@@ -132,9 +144,20 @@ async function renderLoadStatus() {
   loadWarningEl.textContent = shouldShowStatus
     ? (loadStatus.message || LOAD_STATUS_MESSAGES[loadStatus.status] || '')
     : '';
+  siteSettingsEl.hidden = shouldShowStatus;
+
+  if (shouldShowStatus) {
+    document.body.dataset.loadStatus = loadStatus.status;
+  } else {
+    delete document.body.dataset.loadStatus;
+  }
 }
 
 async function saveSettings() {
+  if (!currentHost) {
+    return;
+  }
+
   const checkedPosition = document.querySelector('input[name="widgetPosition"]:checked');
   const settings = normalizeSettings({
     now4realEnabled: now4realEnabledInput.checked,
@@ -142,14 +165,18 @@ async function saveSettings() {
     demoMode: demoModeInput.checked
   });
 
-  await chrome.storage.sync.set(settings);
+  const { now4realEnabled, widgetPosition, demoMode } = settings;
+  await chrome.storage.sync.set({
+    [getEnabledKey()]: now4realEnabled,
+    [getWidgetPositionKey()]: widgetPosition,
+    [getDemoModeKey()]: demoMode
+  });
   await chrome.runtime.sendMessage({
-    type: 'now4real:update-action-icon',
-    now4realEnabled: settings.now4realEnabled
+    type: 'now4real:update-action-icon'
   });
   render(settings);
   await refreshCurrentTab();
-  setStatus('Settings saved. Current tab refreshed.');
+  setStatus('Settings saved. Current site refreshed.');
 }
 
 async function saveWidgetColors() {
@@ -164,7 +191,11 @@ async function saveWidgetColors() {
   await chrome.storage.sync.set({ [getWidgetColorsKey()]: normalizeWidgetColors(colors) });
   resetWidgetColorsButton.hidden = false;
   await refreshCurrentTab();
-  setStatus('Widget colors saved. Current tab refreshed.');
+  setStatus('Widget colors saved. Current site refreshed.');
+}
+
+function getEnabledKey() {
+  return `now4realEnabled:${currentHost}`;
 }
 
 async function resetWidgetColors() {
@@ -175,7 +206,7 @@ async function resetWidgetColors() {
   await chrome.storage.sync.remove(getWidgetColorsKey());
   renderWidgetColors(DEFAULT_WIDGET_COLORS);
   await refreshCurrentTab();
-  setStatus('Default widget colors restored. Current tab refreshed.');
+  setStatus('Default widget colors restored. Current site refreshed.');
 }
 
 async function refreshCurrentTab() {
@@ -195,7 +226,20 @@ async function init() {
   const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   currentHost = tab && tab.url ? getHostFromUrl(tab.url) : '';
 
-  const settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
+  now4realEnabledInput.disabled = !currentHost;
+  const storedSettings = await chrome.storage.sync.get(
+    currentHost ? {
+      [getEnabledKey()]: false,
+      [getWidgetPositionKey()]: DEFAULT_SETTINGS.widgetPosition,
+      [getDemoModeKey()]: DEFAULT_SETTINGS.demoMode
+    } : DEFAULT_SETTINGS
+  );
+  const settings = {
+    ...storedSettings,
+    now4realEnabled: currentHost ? storedSettings[getEnabledKey()] : false,
+    widgetPosition: currentHost ? storedSettings[getWidgetPositionKey()] : DEFAULT_SETTINGS.widgetPosition,
+    demoMode: currentHost ? storedSettings[getDemoModeKey()] : DEFAULT_SETTINGS.demoMode
+  };
   render(settings);
   if (currentHost) {
     const storedColors = await chrome.storage.sync.get(getWidgetColorsKey());
@@ -212,6 +256,12 @@ async function init() {
   demoModeInput.addEventListener('change', saveSettings);
   widgetColorInputs.forEach((input) => input.addEventListener('change', saveWidgetColors));
   resetWidgetColorsButton.addEventListener('click', resetWidgetColors);
+
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === 'local' && changes[getLoadStatusKey()]) {
+      void renderLoadStatus();
+    }
+  });
 }
 
 init();

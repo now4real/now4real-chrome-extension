@@ -1,6 +1,12 @@
 const LOAD_WARNING_MESSAGE = 'Now4real could not load on this site because the site blocks third-party scripts.';
+const NATIVE_SCRIPT_MESSAGE = 'Now4real is already provided by this site. The extension did not inject it.';
 const NOW4REAL_SCRIPT_URL = 'https://cdn.now4real.com/now4real.js';
 const NOW4REAL_SCRIPT_ORIGIN = new URL(NOW4REAL_SCRIPT_URL).origin;
+const NOW4REAL_SCRIPT_ENDPOINTS = [
+  { protocol: 'https:', hostname: 'cdn.now4real.com', port: '', pathname: '/now4real.js' },
+  { protocol: 'https:', hostname: 'cdn.staging.now4real.com', port: '', pathname: '/now4real.js' },
+  { protocol: 'http:', hostname: 'localhost.cdn.localtest.me', port: '3000', pathname: '/now4real.js' }
+];
 const tabCspVerdicts = new Map();
 const ACTION_ICONS = {
   active: {
@@ -17,7 +23,7 @@ const ACTION_ICONS = {
   }
 };
 
-async function setActionIcon(now4realEnabled) {
+async function setActionIcon(now4realEnabled, tabId) {
   const paths = now4realEnabled ? ACTION_ICONS.active : ACTION_ICONS.inactive;
   const imageDataEntries = await Promise.all(Object.entries(paths).map(async ([size, path]) => {
     const response = await fetch(chrome.runtime.getURL(path));
@@ -36,12 +42,32 @@ async function setActionIcon(now4realEnabled) {
     return [size, context.getImageData(0, 0, dimension, dimension)];
   }));
 
-  await chrome.action.setIcon({ imageData: Object.fromEntries(imageDataEntries) });
+  await chrome.action.setIcon({
+    imageData: Object.fromEntries(imageDataEntries),
+    ...(Number.isInteger(tabId) ? { tabId } : {})
+  });
 }
 
-async function updateActionIcon() {
-  const { now4realEnabled = false } = await chrome.storage.sync.get({ now4realEnabled: false });
-  await setActionIcon(now4realEnabled);
+async function updateActionIconForTab(tab) {
+  if (!tab || !Number.isInteger(tab.id)) {
+    return;
+  }
+
+  let host = '';
+  try {
+    host = normalizeHost(new URL(tab.url || '').hostname);
+  } catch (error) {
+    // Unsupported URLs keep the extension's default inactive icon.
+  }
+
+  const key = `now4realEnabled:${host}`;
+  const settings = host ? await chrome.storage.sync.get({ [key]: false }) : {};
+  await setActionIcon(Boolean(settings[key]), tab.id);
+}
+
+async function updateActionIconForActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  await updateActionIconForTab(tab);
 }
 
 function normalizeHost(host) {
@@ -50,6 +76,20 @@ function normalizeHost(host) {
 
 function getLoadStatusKey(host) {
   return `now4realLoadStatus:${normalizeHost(host)}`;
+}
+
+function isNow4realScriptUrl(scriptUrl) {
+  try {
+    const url = new URL(scriptUrl);
+    return NOW4REAL_SCRIPT_ENDPOINTS.some((endpoint) => (
+      url.protocol === endpoint.protocol
+      && url.hostname === endpoint.hostname
+      && url.port === endpoint.port
+      && url.pathname === endpoint.pathname
+    ));
+  } catch (error) {
+    return false;
+  }
 }
 
 function getHeaderValue(headers, name) {
@@ -161,6 +201,20 @@ async function setBlockedStatus(host) {
   });
 }
 
+async function setSiteExistingStatus(host) {
+  if (!host) {
+    return;
+  }
+
+  await chrome.storage.local.set({
+    [getLoadStatusKey(host)]: {
+      status: 'site-existing',
+      message: NATIVE_SCRIPT_MESSAGE,
+      updatedAt: Date.now()
+    }
+  });
+}
+
 async function clearAllowedStatus(host) {
   if (!host) {
     return;
@@ -223,29 +277,66 @@ chrome.webRequest.onHeadersReceived.addListener(
   ['responseHeaders', 'extraHeaders']
 );
 
+chrome.webRequest.onBeforeRequest.addListener(
+  (details) => {
+    if (details.tabId < 0 || !isNow4realScriptUrl(details.url)) {
+      return;
+    }
+
+    let host = '';
+    try {
+      host = normalizeHost(new URL(details.documentUrl || details.initiator || '').hostname);
+    } catch (error) {
+      return;
+    }
+
+    void setSiteExistingStatus(host);
+  },
+  {
+    urls: [
+      '*://cdn.now4real.com/*',
+      '*://cdn.staging.now4real.com/*',
+      'http://localhost.cdn.localtest.me/*'
+    ],
+    types: ['script']
+  }
+);
+
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabCspVerdicts.delete(tabId);
 });
 
 chrome.runtime.onInstalled.addListener(() => {
-  void updateActionIcon();
+  void updateActionIconForActiveTab();
 });
 
 chrome.runtime.onStartup.addListener(() => {
-  void updateActionIcon();
+  void updateActionIconForActiveTab();
 });
 
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === 'sync' && changes.now4realEnabled) {
-    void updateActionIcon();
+  if (areaName === 'sync' && Object.keys(changes).some((key) => key.startsWith('now4realEnabled:'))) {
+    void updateActionIconForActiveTab();
   }
 });
 
-void updateActionIcon();
+chrome.tabs.onActivated.addListener(({ tabId }) => {
+  chrome.tabs.get(tabId)
+    .then(updateActionIconForTab)
+    .catch(() => {});
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.url || changeInfo.status === 'loading') {
+    void updateActionIconForTab(tab);
+  }
+});
+
+void updateActionIconForActiveTab();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message && message.type === 'now4real:update-action-icon') {
-    setActionIcon(Boolean(message.now4realEnabled))
+    updateActionIconForActiveTab()
       .then(() => sendResponse({ ok: true }))
       .catch((error) => sendResponse({ error: String(error) }));
     return true;

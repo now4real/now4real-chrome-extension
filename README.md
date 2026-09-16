@@ -5,7 +5,7 @@ Chrome Manifest V3 extension that injects the Now4real widget into pages visited
 ## Features
 
 - Automatic injection of the configured Now4real CDN script only on top-level HTML pages (`text/html`). The response `Content-Type` is also checked so XML documents rendered as HTML through XSLT, including sitemaps, are excluded along with PDFs, SVGs, images, media, downloads, API responses, and other non-HTML documents.
-- Extension popup menu for turning Now4real on or off and choosing the widget position: left or right.
+- Extension popup menu for turning Now4real on or off, choosing the widget position, and enabling demo mode for the current site. Each preference is remembered separately for each domain; the default position is left and demo mode is enabled.
 - Per-domain background and text color controls applied to both the closed and open widget, with restoration of the Now4real defaults.
 - Chrome Options page with the same controls.
 - Demo mode that chats only with bots and simulates counts, rankings, and maps, using `now4real.config.target = 'demo'`.
@@ -30,14 +30,14 @@ The `zip` command generates `now4real-chrome-extension.zip`, ready as a base pac
 
 ## Technical Notes
 
-The content script reads settings from `chrome.storage.sync`. When Now4real is enabled, it does not inject `src/page-bridge.js` immediately. It first asks the extension background service worker for a CSP verdict for the current tab.
+The content script reads settings from `chrome.storage.sync`. Whether Now4real is enabled is stored per domain, so it injects only on sites explicitly enabled by the user. When enabled for the current site, it does not inject `src/page-bridge.js` immediately. It first asks the extension background service worker for a CSP verdict for the current tab.
 
 Current injection flow:
 
 1. The background service worker observes the `main_frame` response through `chrome.webRequest.onHeadersReceived` and inspects the `Content-Security-Policy` header.
 2. The background stores an in-memory verdict for the current tab: the Now4real CDN is either allowed, blocked, or not known yet.
-3. The content script starts at `document_idle`, reads the current settings, and asks the background for that verdict before injecting anything into the page.
-4. Before CSP checks, the content script detects an existing native Now4real loader for production, staging, or local development and waits two seconds for dynamically added loader scripts. If one is found, the extension does nothing and preserves the site's own configuration.
+3. The content script starts at `document_idle` and always detects an existing native Now4real loader for production, staging, or local development, even if Now4real is not enabled for the site. It waits two seconds for dynamically added loader scripts; if one is found, the popup shows the site's existing-widget notice instead of settings.
+4. If no native loader is found, the content script reads the current settings and asks the background for the CSP verdict before injecting anything into the page.
 5. The content script also checks any `meta http-equiv="Content-Security-Policy"` declarations already present in the DOM.
 6. Only if the page does not appear to block the Now4real CDN does the content script inject `src/page-bridge.js` into the page context.
 7. The bridge prepares `window.now4real.config` and loads the Now4real CDN script.

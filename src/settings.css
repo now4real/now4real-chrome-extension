@@ -33,6 +33,11 @@ body {
   min-height: 360px;
 }
 
+.popup-shell[data-load-status] {
+  width: 340px;
+  min-height: 0;
+}
+
 .options-shell {
   min-height: 100vh;
   display: grid;
@@ -44,6 +49,10 @@ body {
   width: 100%;
   padding: 22px;
   background: var(--panel);
+}
+
+.popup-shell[data-load-status] .panel {
+  padding: 16px;
 }
 
 .options-panel {
@@ -204,6 +213,10 @@ p {
   border-color: #f0c6c6;
   color: #8f1f1f;
   background: #fff1f1;
+}
+
+.popup-shell[data-load-status] .load-warning {
+  margin: 0;
 }
 
 .segmented-control {

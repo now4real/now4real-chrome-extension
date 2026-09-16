@@ -1,5 +1,4 @@
 const DEFAULT_SETTINGS = {
-  now4realEnabled: false,
   widgetPosition: 'left',
   demoMode: true
 };
@@ -99,6 +98,15 @@ async function setLoadStatus(status, message) {
 
 async function clearLoadStatus() {
   await chrome.storage.local.remove(getLoadStatusKey());
+}
+
+async function clearSiteExistingStatus() {
+  const key = getLoadStatusKey();
+  const storedValue = await chrome.storage.local.get(key);
+
+  if (storedValue[key] && storedValue[key].status === 'site-existing') {
+    await chrome.storage.local.remove(key);
+  }
 }
 
 function getHeaderValueFromPolicy(policy, directiveName) {
@@ -299,11 +307,24 @@ function injectBridge() {
 }
 
 async function loadSettings() {
-  const settings = await chrome.storage.sync.get(DEFAULT_SETTINGS);
   const host = normalizeHost(window.location.hostname);
+  const enabledKey = `now4realEnabled:${host}`;
+  const positionKey = `now4realWidgetPosition:${host}`;
+  const demoModeKey = `now4realDemoMode:${host}`;
   const colorKey = `now4realWidgetColors:${host}`;
-  const storedColors = host ? await chrome.storage.sync.get(colorKey) : {};
-  return normalizeSettings({ ...settings, widgetColors: storedColors[colorKey] });
+  const settings = await chrome.storage.sync.get([
+    enabledKey,
+    positionKey,
+    colorKey,
+    demoModeKey
+  ]);
+  return normalizeSettings({
+    ...settings,
+    now4realEnabled: settings[enabledKey] || false,
+    widgetPosition: settings[positionKey] || DEFAULT_SETTINGS.widgetPosition,
+    demoMode: settings[demoModeKey] !== false,
+    widgetColors: settings[colorKey]
+  });
 }
 
 async function init() {
@@ -311,18 +332,20 @@ async function init() {
     return;
   }
 
+  if (await waitForNativeNow4realScript()) {
+    await setLoadStatus('site-existing', NATIVE_SCRIPT_MESSAGE);
+    console.info('Now4real extension skipped injection because an existing Now4real script was found on this page.');
+    return;
+  }
+
+  await clearSiteExistingStatus();
+
   const settings = await loadSettings();
   if (!settings.now4realEnabled) {
     return;
   }
 
   if (!await hasSupportedResponseContentType()) {
-    return;
-  }
-
-  if (await waitForNativeNow4realScript()) {
-    await setLoadStatus('site-existing', NATIVE_SCRIPT_MESSAGE);
-    console.info('Now4real extension skipped injection because an existing Now4real script was found on this page.');
     return;
   }
 
