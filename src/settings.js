@@ -27,6 +27,7 @@ const LOAD_STATUS_MESSAGES = {
 };
 
 let currentHost = '';
+let isWidgetEnabledForCurrentSite = false;
 
 function getWidgetColorsKey() {
   return `now4realWidgetColors:${currentHost}`;
@@ -74,6 +75,7 @@ function setStatus(message) {
 function render(settings) {
   const normalizedSettings = normalizeSettings(settings);
 
+  isWidgetEnabledForCurrentSite = normalizedSettings.now4realEnabled;
   now4realEnabledInput.checked = normalizedSettings.now4realEnabled;
   widgetStateText.textContent = currentHost
     ? (normalizedSettings.now4realEnabled
@@ -164,6 +166,7 @@ async function saveSettings() {
     widgetPosition: checkedPosition ? checkedPosition.value : DEFAULT_SETTINGS.widgetPosition,
     demoMode: demoModeInput.checked
   });
+  const shouldRefresh = isWidgetEnabledForCurrentSite || settings.now4realEnabled;
 
   const { now4realEnabled, widgetPosition, demoMode } = settings;
   await chrome.storage.sync.set({
@@ -175,8 +178,12 @@ async function saveSettings() {
     type: 'now4real:update-action-icon'
   });
   render(settings);
-  await refreshCurrentTab();
-  setStatus('Settings saved. Current site refreshed.');
+  if (shouldRefresh) {
+    await refreshCurrentTab();
+    setStatus('Settings saved. Current site refreshed.');
+  } else {
+    setStatus('Settings saved.');
+  }
 }
 
 async function saveWidgetColors() {
@@ -190,8 +197,12 @@ async function saveWidgetColors() {
   ]));
   await chrome.storage.sync.set({ [getWidgetColorsKey()]: normalizeWidgetColors(colors) });
   resetWidgetColorsButton.hidden = false;
-  await refreshCurrentTab();
-  setStatus('Widget colors saved. Current site refreshed.');
+  if (isWidgetEnabledForCurrentSite) {
+    await refreshCurrentTab();
+    setStatus('Widget colors saved. Current site refreshed.');
+  } else {
+    setStatus('Widget colors saved.');
+  }
 }
 
 function getEnabledKey() {
@@ -205,8 +216,12 @@ async function resetWidgetColors() {
 
   await chrome.storage.sync.remove(getWidgetColorsKey());
   renderWidgetColors(DEFAULT_WIDGET_COLORS);
-  await refreshCurrentTab();
-  setStatus('Default widget colors restored. Current site refreshed.');
+  if (isWidgetEnabledForCurrentSite) {
+    await refreshCurrentTab();
+    setStatus('Default widget colors restored. Current site refreshed.');
+  } else {
+    setStatus('Default widget colors restored.');
+  }
 }
 
 async function refreshCurrentTab() {
