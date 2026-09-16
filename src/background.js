@@ -8,6 +8,7 @@ const NOW4REAL_SCRIPT_ENDPOINTS = [
   { protocol: 'http:', hostname: 'localhost.cdn.localtest.me', port: '3000', pathname: '/now4real.js' }
 ];
 const tabCspVerdicts = new Map();
+const extensionInjectionTabs = new Set();
 const ACTION_ICONS = {
   active: {
     16: 'icons/icon16.png',
@@ -283,6 +284,10 @@ chrome.webRequest.onBeforeRequest.addListener(
       return;
     }
 
+    if (extensionInjectionTabs.delete(details.tabId)) {
+      return;
+    }
+
     let host = '';
     try {
       host = normalizeHost(new URL(details.documentUrl || details.initiator || '').hostname);
@@ -304,6 +309,7 @@ chrome.webRequest.onBeforeRequest.addListener(
 
 chrome.tabs.onRemoved.addListener((tabId) => {
   tabCspVerdicts.delete(tabId);
+  extensionInjectionTabs.delete(tabId);
 });
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -335,6 +341,17 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
 void updateActionIconForActiveTab();
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message && message.type === 'now4real:extension-injection') {
+    const tabId = sender.tab && Number.isInteger(sender.tab.id) ? sender.tab.id : -1;
+    if (tabId >= 0) {
+      extensionInjectionTabs.add(tabId);
+      setTimeout(() => extensionInjectionTabs.delete(tabId), 5000);
+    }
+
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (message && message.type === 'now4real:update-action-icon') {
     updateActionIconForActiveTab()
       .then(() => sendResponse({ ok: true }))

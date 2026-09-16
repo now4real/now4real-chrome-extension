@@ -353,6 +353,12 @@ async function init() {
     return;
   }
 
+  try {
+    await chrome.runtime.sendMessage({ type: 'now4real:extension-injection' });
+  } catch (error) {
+    console.warn('Unable to mark the Now4real extension injection.', error);
+  }
+
   await injectBridge();
   dispatchSettings(settings);
 }
