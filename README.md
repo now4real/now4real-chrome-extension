@@ -1,55 +1,65 @@
 # Now4real Everywhere
 
-Chrome Manifest V3 extension that injects the Now4real widget into pages visited by the user.
+**Try the Now4real widget on a website that has not integrated it yet.**
 
-## Features
+Now4real Everywhere is a Google Chrome extension that temporarily adds the Now4real chat widget to websites you visit. It is designed for anyone who wants to try the widget experience on their own website, or in an environment where they are authorized to run tests, before proceeding with an integration.
 
-- Automatic injection of the configured Now4real CDN script only on top-level HTML pages (`text/html`). The response `Content-Type` is also checked so XML documents rendered as HTML through XSLT, including sitemaps, are excluded along with PDFs, SVGs, images, media, downloads, API responses, and other non-HTML documents.
-- Extension popup menu for turning Now4real on or off, choosing the widget position, and enabling demo mode for the current site. Each preference is remembered separately for each domain; the default position is left and demo mode is enabled.
-- Per-domain background and text color controls applied to both the closed and open widget, with restoration of the Now4real defaults.
-- Chrome Options page with the same controls.
-- Demo mode that chats only with bots and simulates counts, rankings, and maps, using `now4real.config.target = 'demo'`.
-- Settings saved with `chrome.storage.sync`; changing a setting refreshes the current tab so the widget starts with the new configuration.
-- Extension icons generated from the Now4real website favicon.
+The extension is active only on domains that you explicitly enable, and can be turned off at any time.
 
-## Local Installation
+![Now4real Everywhere open in Chrome, with the extension popup and widget displayed on a webpage.](docs/now4real-everywhere-preview.png)
 
-1. Open `chrome://extensions`.
-2. Enable "Developer mode".
-3. Select "Load unpacked".
-4. Choose this folder.
+## What you can do
 
-## Web Store Package Preparation
+- Enable the Now4real widget for a specific website.
+- Try the widget in **demo mode**, with bots and simulated data.
+- Turn off demo mode to experience the widget with other people using this extension on the same websites.
+- Choose whether the widget appears on the left or right side of the page.
+- Customize the widget background and text colors for each website.
+- Keep preferences separate for every domain.
 
-```sh
-npm run validate
-npm run zip
-```
+## Install locally in Chrome
 
-The `zip` command generates `now4real-chrome-extension.zip`, ready as a base package for Chrome Web Store upload.
+The extension does not require a build step or dependency installation. Once you have downloaded the project, you can load it directly in Chrome.
 
-## Technical Notes
+1. Download the project from GitHub using **Code → Download ZIP**, then extract the archive; alternatively, clone the repository.
+2. In Chrome, open [chrome://extensions](chrome://extensions).
+3. Enable **Developer mode** in the top-right corner.
+4. Select **Load unpacked**.
+5. Select the project's root folder: the folder that contains `manifest.json`.
+6. If needed, pin **Now4real Everywhere** to the Chrome toolbar from the Extensions menu.
 
-The content script reads settings from `chrome.storage.sync`. Whether Now4real is enabled is stored per domain, so it injects only on sites explicitly enabled by the user. When enabled for the current site, it does not inject `src/page-bridge.js` immediately. It first asks the extension background service worker for a CSP verdict for the current tab.
+The extension will appear in Chrome's extension list and remain available until you disable or remove it.
 
-Current injection flow:
+## Try it on a website
 
-1. The background service worker observes the `main_frame` response through `chrome.webRequest.onHeadersReceived` and inspects the `Content-Security-Policy` header.
-2. The background stores an in-memory verdict for the current tab: the Now4real CDN is either allowed, blocked, or not known yet.
-3. The content script starts at `document_idle` and always detects an existing native Now4real loader for production, staging, or local development, even if Now4real is not enabled for the site. It waits two seconds for dynamically added loader scripts; if one is found, the popup shows the site's existing-widget notice instead of settings.
-4. If no native loader is found, the content script reads the current settings and asks the background for the CSP verdict before injecting anything into the page.
-5. The content script also checks any `meta http-equiv="Content-Security-Policy"` declarations already present in the DOM.
-6. Only if the page does not appear to block the Now4real CDN does the content script inject `src/page-bridge.js` into the page context.
-7. The bridge prepares `window.now4real.config` and loads the Now4real CDN script.
+1. Open the page of the website you want to test in Chrome.
+2. Select the **Now4real Everywhere** icon in the toolbar.
+3. Turn on the main switch to enable the widget for that website.
+4. The page will refresh and the widget will appear in the selected position.
 
-This is a best-effort CSP pre-check. In most cases the background has already inspected the response headers before the content script asks for the verdict, because `onHeadersReceived` happens early in navigation and `document_idle` runs later. However, this is not a strict synchronization guarantee. The background and the content script are separate extension contexts, so there can still be edge cases where the verdict is not available yet when the content script starts.
+For your first test, leave **demo mode** enabled: you can interact with bots and see simulated data without involving real users. Changes to the settings automatically refresh the current page.
 
-For that reason, the extension still keeps a fallback path:
+To stop testing, open the extension panel again and turn off the switch. This setting applies only to the current website; other websites will not be changed.
 
-1. If the pre-check says the CDN should be blocked, the extension skips injection and stores a local warning for that host.
-2. If the pre-check misses a case and the browser still blocks the CDN script, `src/page-bridge.js` emits a blocked status event.
-3. The content script stores the blocked status in `chrome.storage.local`, and the popup/options UI shows a warning for the current host.
+## Privacy
 
-This design reduces CSP console errors by avoiding injection when a block is predictable, but it cannot guarantee that every possible CSP violation will be prevented in advance.
+The extension stores its settings locally in Chrome. When Chrome Sync is enabled, the widget status, demo-mode preference, position, and color choices are synchronized through your Chrome profile and are associated with the website's domain. Temporary messages about whether a website blocks the widget are stored only on the device.
 
-Some special browser pages, such as `chrome://`, the Chrome Web Store, and pages with especially restrictive policies, do not allow extension script injection.
+This extension does not contain code that sends these settings to a Now4real-operated backend. However, when you enable the widget, it loads the Now4real script from the Now4real CDN. Your use of the widget and any information you provide through it are subject to Now4real's applicable privacy terms.
+
+## Important notes
+
+- The extension works on standard HTTP and HTTPS web pages. It cannot run on Chrome internal pages, the Chrome Web Store, or other browser-protected contexts.
+- If a website blocks third-party scripts through a particularly restrictive Content Security Policy, the widget may not load. In this case, the extension displays a warning and does not alter the page.
+- If the website already integrates Now4real, the extension detects the existing widget and does not add a second one.
+- Preferences are saved through Chrome Sync and associated with the domain you visit.
+
+## Remove the extension
+
+Open [chrome://extensions](chrome://extensions), find **Now4real Everywhere**, and select **Remove**. Alternatively, use the switch on the same page to disable it temporarily.
+
+## Contributing
+
+Bug reports and improvement proposals are welcome through the repository's issues and pull requests.
+
+The project's maintenance scripts are intended for extension development and are not required for local installation.

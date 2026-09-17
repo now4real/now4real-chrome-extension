@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Chrome extension MV3 that injects the Now4real widget on visited pages.",
+  "license": "MIT",
   "scripts": {
     "generate:icons": "sh scripts/generate-icons.sh",
     "validate": "node scripts/validate.js",

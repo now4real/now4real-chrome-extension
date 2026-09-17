@@ -14,7 +14,6 @@ const requiredFiles = [
   manifest.action.default_popup,
   ...Object.values(manifest.icons || {}),
   ...Object.values(manifest.action.default_icon || {}),
-  manifest.options_ui.page,
   ...manifest.content_scripts.flatMap((script) => script.js),
   ...manifest.web_accessible_resources.flatMap((resource) => resource.resources)
 ];
